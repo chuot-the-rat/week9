@@ -1,4 +1,4 @@
-function BookCard({ book, isSelected, onSelect }) {
+function BookCard({ book, isSelected, onSelect, isOnLoan }) {
     const handleCardClick = (e) => {
         if (e.target.closest("a") || e.target.closest("button")) {
             return;
@@ -11,6 +11,7 @@ function BookCard({ book, isSelected, onSelect }) {
             className={`card ${isSelected ? "card-selected" : ""}`}
             onClick={handleCardClick}
         >
+            {isOnLoan && <div className="loan-badge">On Loan</div>}
             <a
                 href={book.url}
                 target="_blank"

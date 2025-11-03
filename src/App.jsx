@@ -108,8 +108,8 @@ function App() {
     }, [books, publisherFilter]);
 
     // helper lists
-    const availableBooks = filteredBooks.filter((b) =>
-        !loans.some((l) => l.isbn13 === b.isbn13)
+    const availableBooks = filteredBooks.filter(
+        (b) => !loans.some((l) => l.isbn13 === b.isbn13)
     );
 
     // loan form state

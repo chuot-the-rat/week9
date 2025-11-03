@@ -8,6 +8,11 @@ body,
     flex-direction: column;
 }
 
+/* make widths include padding so 100% inputs don't overflow their containers */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 body {
     font-family: "Inter", Roboto, sans-serif;
     background: #000258;
@@ -121,6 +126,81 @@ body {
     background-repeat: no-repeat;
     background-position: right 16px center;
     background-size: 16px 16px;
+}
+
+.filter-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.filter-row select {
+    width: auto;
+    flex: 1 1 auto;
+}
+
+.toggle-loans button {
+    height: 54px;
+    border-radius: 8px;
+    border: none;
+    padding: 0 12px;
+    background: rgba(0, 122, 204, 0.9);
+    color: white;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.loan-badge {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(228, 62, 62, 0.95);
+    color: white;
+    padding: 12px 18px;
+    border-radius: 6px;
+    font-size: 1.25rem;
+    z-index: 2;
+}
+
+.loan-view {
+    max-width: 1300px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 28px;
+    border-radius: 12px;
+    color: #111;
+    font-size: 1.15rem;
+    box-sizing: border-box;
+    margin: 0 auto;
+}
+
+.loan-view button {
+    cursor: pointer;
+    border: none;
+    font-size: 1.5rem;
+}
+
+.loan-view select {
+    cursor: pointer;
+    border: none;
+    font-size: 1.15rem;
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+
+.loan-header {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 12px;
+}
+
+.loan-form {
+    margin-bottom: 18px;
+}
+
+.loaned-list ul {
+    list-style: none;
+    padding: 0;
 }
 
 .btn-filter select option {
