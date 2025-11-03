@@ -7,25 +7,49 @@ function App() {
     const [books, setBooks] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [editingBook, setEditingBook] = useState(null);
+    const [showLoans, setShowLoans] = useState(false);
+    const [loans, setLoans] = useState([]);
     const [publisherFilter, setPublisherFilter] = useState("All");
-    const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {
-        const saved = localStorage.getItem("books");
-        if (saved) {
-            try {
+        // load saved books and loans once on mount
+        try {
+            const saved = localStorage.getItem("books");
+            if (saved) {
                 const parsed = JSON.parse(saved);
                 if (Array.isArray(parsed)) setBooks(parsed);
-            } catch {}
+            }
+        } catch (err) {
+            void err;
         }
-        setIsLoaded(true);
+
+        try {
+            const savedLoans = localStorage.getItem("loans");
+            if (savedLoans) {
+                const parsed = JSON.parse(savedLoans);
+                if (Array.isArray(parsed)) setLoans(parsed);
+            }
+        } catch (err) {
+            void err;
+        }
     }, []);
 
+    // persist books and loans whenever they change
     useEffect(() => {
-        if (isLoaded) {
+        try {
             localStorage.setItem("books", JSON.stringify(books));
+        } catch (err) {
+            void err;
         }
-    }, [books, isLoaded]);
+    }, [books]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem("loans", JSON.stringify(loans));
+        } catch (err) {
+            void err;
+        }
+    }, [loans]);
 
     const handleBookSelect = (isbn13) => {
         setBooks(
@@ -41,7 +65,9 @@ function App() {
             ...formData,
             isbn13: Date.now().toString(),
             price: "$0.00",
-            image: formData.image || "https://media1.tenor.com/m/DkActybid-oAAAAd/my-apologies-cheese.gif",
+            image:
+                formData.image ||
+                "https://media1.tenor.com/m/DkActybid-oAAAAd/my-apologies-cheese.gif",
             url: "#",
             selected: false,
         };
@@ -81,6 +107,52 @@ function App() {
         return books.filter((b) => b.publisher === publisherFilter);
     }, [books, publisherFilter]);
 
+    // helper lists
+    const availableBooks = filteredBooks.filter((b) =>
+        !loans.some((l) => l.isbn13 === b.isbn13)
+    );
+
+    // loan form state
+    const [borrower, setBorrower] = useState("");
+    const [selectedIsbn, setSelectedIsbn] = useState("");
+    const [weeks, setWeeks] = useState(1);
+
+    // pick a sensible default when availableBooks changes
+    useEffect(() => {
+        if (availableBooks.length === 0) {
+            setSelectedIsbn("");
+        } else if (!availableBooks.some((b) => b.isbn13 === selectedIsbn)) {
+            setSelectedIsbn(availableBooks[0].isbn13);
+        }
+    }, [availableBooks, selectedIsbn]);
+
+    const handleLoanSubmit = (e) => {
+        e.preventDefault();
+        if (!borrower || !selectedIsbn) return;
+        const now = new Date();
+        const due = new Date(now);
+        due.setDate(due.getDate() + weeks * 7);
+        const loan = {
+            isbn13: selectedIsbn,
+            borrower: borrower.trim(),
+            weeks: Number(weeks),
+            dueDate: due.toISOString(),
+            loanedAt: now.toISOString(),
+        };
+        setLoans((prev) => [...prev, loan]);
+        // reset form
+        setBorrower("");
+        setWeeks(1);
+    };
+
+    const formatDate = (iso) => {
+        try {
+            return new Date(iso).toLocaleDateString();
+        } catch {
+            return iso;
+        }
+    };
+
     return (
         <>
             <div className="app">
@@ -90,22 +162,34 @@ function App() {
                 <div className="content">
                     <div className="btn-container">
                         <div className="btn-filter">
-                            <select
-                                value={publisherFilter}
-                                onChange={(e) =>
-                                    setPublisherFilter(e.target.value)
-                                }
-                            >
-                                {publishers.map((p) => (
-                                    <option
-                                        key={p}
-                                        value={p}
-                                        className="option"
+                            <div className="filter-row">
+                                <select
+                                    value={publisherFilter}
+                                    onChange={(e) =>
+                                        setPublisherFilter(e.target.value)
+                                    }
+                                >
+                                    {publishers.map((p) => (
+                                        <option
+                                            key={p}
+                                            value={p}
+                                            className="option"
+                                        >
+                                            {p}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="toggle-loans">
+                                    <button
+                                        onClick={() => setShowLoans((s) => !s)}
+                                        type="button"
                                     >
-                                        {p}
-                                    </option>
-                                ))}
-                            </select>
+                                        {showLoans
+                                            ? "Show Books"
+                                            : "Manage Loans"}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div className="btn">
                             <button
@@ -134,14 +218,135 @@ function App() {
                         </div>
                     </div>
                     <div className="content-books">
-                        {filteredBooks.map((book) => (
-                            <BookCard
-                                key={book.isbn13}
-                                book={book}
-                                isSelected={book.selected}
-                                onSelect={() => handleBookSelect(book.isbn13)}
-                            />
-                        ))}
+                        {showLoans ? (
+                            <div className="loan-view">
+                                <div className="loan-header">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowLoans(false)}
+                                    >
+                                        ← Back to Books
+                                    </button>
+                                </div>
+
+                                <div className="loan-form">
+                                    {availableBooks.length === 0 ? (
+                                        <p>All books are currently on loan.</p>
+                                    ) : (
+                                        <form onSubmit={handleLoanSubmit}>
+                                            <div className="form-group">
+                                                <label>Borrower *</label>
+                                                <input
+                                                    type="text"
+                                                    value={borrower}
+                                                    onChange={(e) =>
+                                                        setBorrower(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Book *</label>
+                                                <select
+                                                    value={selectedIsbn}
+                                                    onChange={(e) =>
+                                                        setSelectedIsbn(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    required
+                                                >
+                                                    {availableBooks.map((b) => (
+                                                        <option
+                                                            key={b.isbn13}
+                                                            value={b.isbn13}
+                                                        >
+                                                            {b.title}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="form-group">
+                                                <label>
+                                                    Loan Period (weeks) *
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min={1}
+                                                    max={4}
+                                                    value={weeks}
+                                                    onChange={(e) =>
+                                                        setWeeks(
+                                                            Number(
+                                                                e.target.value
+                                                            )
+                                                        )
+                                                    }
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="form-actions">
+                                                <button
+                                                    type="submit"
+                                                    className="btn-submit"
+                                                >
+                                                    Create Loan
+                                                </button>
+                                            </div>
+                                        </form>
+                                    )}
+                                </div>
+
+                                <div className="loaned-list">
+                                    <h3>Loaned Books</h3>
+                                    {loans.length === 0 ? (
+                                        <p>No loans yet.</p>
+                                    ) : (
+                                        <ul>
+                                            {loans.map((l) => {
+                                                const book = books.find(
+                                                    (b) => b.isbn13 === l.isbn13
+                                                );
+                                                return (
+                                                    <li
+                                                        key={
+                                                            l.isbn13 +
+                                                            l.loanedAt
+                                                        }
+                                                    >
+                                                        <strong>
+                                                            {l.borrower}
+                                                        </strong>{" "}
+                                                        —{" "}
+                                                        {book
+                                                            ? book.title
+                                                            : l.isbn13}{" "}
+                                                        — due{" "}
+                                                        {formatDate(l.dueDate)}
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            filteredBooks.map((book) => (
+                                <BookCard
+                                    key={book.isbn13}
+                                    book={book}
+                                    isSelected={book.selected}
+                                    isOnLoan={loans.some(
+                                        (l) => l.isbn13 === book.isbn13
+                                    )}
+                                    onSelect={() =>
+                                        handleBookSelect(book.isbn13)
+                                    }
+                                />
+                            ))
+                        )}
                     </div>
                 </div>
 
