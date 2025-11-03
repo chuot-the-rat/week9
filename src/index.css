@@ -9,7 +9,9 @@ body,
 }
 
 /* make widths include padding so 100% inputs don't overflow their containers */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     box-sizing: border-box;
 }
 
